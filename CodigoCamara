@@ -1,0 +1,87 @@
+package com.example.ejemplotoast;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+
+import android.Manifest;
+import android.content.Context;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.os.Build;
+import android.os.Bundle;
+import android.provider.MediaStore;
+import android.util.Log;
+import android.view.View;
+import android.widget.Button;
+import android.widget.ImageView;
+import android.widget.Toast;
+import android.graphics.Bitmap;
+
+public class MainActivity extends AppCompatActivity {
+    Button Boton1;
+    ImageView img;
+    Toast modal;
+    Context contexto;
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        contexto = this.getBaseContext();
+        Boton1 = findViewById(R.id.button1);
+        img = findViewById(R.id.imageView1);
+        Boton1.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+
+                if(Build.VERSION.SDK_INT > Build.VERSION_CODES.LOLLIPOP_MR1) {
+                    if(contexto.checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                        modal = Toast.makeText(contexto, "Abriendo Camara", Toast.LENGTH_LONG);
+                        modal.show();
+                        AbrirCamara();
+                    }
+                    else{
+                        ActivityCompat.requestPermissions(MainActivity.this, new String[] { "Manifest.permission.CAMERA" }, 100);
+                    }
+                }
+            }
+        });
+    }
+
+    protected void AbrirCamara(){
+        try {
+            Intent camaraPreview = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+            //startActivity(camaraPreview);
+            startActivityForResult(camaraPreview,1);
+        }
+        catch(Exception Ex) {
+            modal = Toast.makeText(contexto, Ex.getMessage(), Toast.LENGTH_LONG);
+            modal.show();
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == 1) {
+            Log.d("Camara","Si");
+            if (resultCode == RESULT_OK) {
+                Bitmap bp = (Bitmap) data.getExtras().get("data");
+                img.setImageBitmap(bp);
+            } else if (resultCode == RESULT_CANCELED) {
+                Toast.makeText(this, "Cancelado", Toast.LENGTH_LONG).show();
+            }
+        }
+    }
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults){
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if(requestCode == 100) {
+            if(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                AbrirCamara();
+            }
+
+        }
+    }
+}

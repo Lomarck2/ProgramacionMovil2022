@@ -1,14 +1,20 @@
 package com.example.ejemplotoast;
 
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
 import android.Manifest;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
@@ -24,6 +30,7 @@ public class MainActivity extends AppCompatActivity {
     ImageView img;
     Toast modal;
     Context contexto;
+    Uri cam_uri;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -36,13 +43,14 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View view) {
 
                 if(Build.VERSION.SDK_INT > Build.VERSION_CODES.LOLLIPOP_MR1) {
-                    if(contexto.checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                    if(contexto.checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED
+                    && contexto.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED ) {
                         modal = Toast.makeText(contexto, "Abriendo Camara", Toast.LENGTH_LONG);
                         modal.show();
                         AbrirCamara();
                     }
                     else{
-                        ActivityCompat.requestPermissions(MainActivity.this, new String[] { "Manifest.permission.CAMERA" }, 100);
+                        ActivityCompat.requestPermissions(MainActivity.this, new String[] {"Manifest.permission.CAMERA", "Manifest.permission.WRITE_EXTERNAL_STORAGE"}, 100);
                     }
                 }
             }
@@ -52,12 +60,18 @@ public class MainActivity extends AppCompatActivity {
     protected void AbrirCamara(){
         try {
             Intent camaraPreview = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-            //startActivity(camaraPreview);
-            startActivityForResult(camaraPreview,1);
+            /*ContentValues values = new ContentValues();
+            values.put(MediaStore.Images.Media.TITLE, "New Picture");
+            values.put(MediaStore.Images.Media.DESCRIPTION, "From Camera");
+            cam_uri = contexto.getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
+            camaraPreview.putExtra(MediaStore.EXTRA_OUTPUT, cam_uri);
+            camaraPreview.setFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);*/
+            startCamera.launch(camaraPreview);
         }
         catch(Exception Ex) {
             modal = Toast.makeText(contexto, Ex.getMessage(), Toast.LENGTH_LONG);
             modal.show();
+            Log.d("Camara","Error: " + Ex.getMessage());
         }
     }
 
@@ -78,10 +92,26 @@ public class MainActivity extends AppCompatActivity {
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults){
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if(requestCode == 100) {
-            if(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            if(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED
+            && grantResults[1] == PackageManager.PERMISSION_GRANTED) {
                 AbrirCamara();
             }
-
         }
     }
+
+    ActivityResultLauncher<Intent> startCamera = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            new ActivityResultCallback<ActivityResult>() {
+                @Override
+                public void onActivityResult(ActivityResult result) {
+                    if (result.getResultCode() == RESULT_OK) {
+                        Bitmap bp = (Bitmap) result.getData().getExtras().get("data");
+                        img.setImageBitmap(bp);
+                    }
+                    else {
+                        Toast.makeText(contexto, "Cancelado", Toast.LENGTH_LONG).show();
+                    }
+                }
+            });
+
 }
